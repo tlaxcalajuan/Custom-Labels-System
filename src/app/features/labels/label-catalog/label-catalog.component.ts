@@ -345,9 +345,39 @@ type SortKey = 'updated-desc' | 'updated-asc' | 'name-asc' | 'name-desc' | 'crea
         background: #fee2e2;
       }
 
+      /* Tablet: pila los filtros y ajusta la tipografía del título. */
       @media (max-width: 720px) {
         .catalog__filters {
           grid-template-columns: 1fr;
+        }
+        .catalog__toolbar {
+          gap: 12px;
+        }
+        .catalog__title {
+          font-size: 20px;
+        }
+      }
+
+      /* Móvil: cards en una sola columna, preview un poco más chico y
+         acciones a ancho completo para tocar con el pulgar. */
+      @media (max-width: 480px) {
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+        .card__preview {
+          height: 140px;
+        }
+        .card__body {
+          padding: 12px;
+        }
+        .card__actions {
+          gap: 6px;
+        }
+        .card__actions .btn,
+        .card__actions a.btn {
+          flex: 1 1 calc(50% - 6px);
+          justify-content: center;
         }
       }
     `,

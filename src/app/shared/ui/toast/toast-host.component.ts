@@ -128,6 +128,20 @@ import { Toast, ToastKind, ToastService } from './toast.service';
         }
       }
 
+      /* En móvil el toast ocupa casi todo el ancho, pegado abajo. */
+      @media (max-width: 480px) {
+        .toast-host {
+          left: 12px;
+          right: 12px;
+          bottom: 12px;
+          max-width: none;
+          align-items: stretch;
+        }
+        .toast {
+          width: 100%;
+        }
+      }
+
       @media print {
         .toast-host {
           display: none;

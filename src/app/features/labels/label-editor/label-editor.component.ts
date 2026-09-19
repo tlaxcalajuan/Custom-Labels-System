@@ -688,6 +688,35 @@ function cloneLabel(source: LabelData): LabelData {
         font-weight: 600;
       }
 
+      /* Tablet y móvil: apilar panel + preview verticalmente. El panel deja de
+         tener max-height fija para poder crecer con la página y el preview
+         aparece debajo con su propio scroll horizontal. */
+      @media (max-width: 960px) {
+        .editor {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        .editor__panel {
+          max-height: none;
+          overflow-y: visible;
+          padding: 16px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .editor {
+          gap: 12px;
+        }
+        .editor__panel {
+          padding: 12px;
+          border-radius: 10px;
+        }
+        .editor__title {
+          font-size: 16px;
+          margin-bottom: 12px;
+        }
+      }
+
       /* Cada grupo es un <details> colapsable con estilo de tarjeta. */
       .group {
         border: 1px solid #e5e7eb;
@@ -795,6 +824,7 @@ function cloneLabel(source: LabelData): LabelData {
         display: flex;
         gap: 8px;
         align-items: flex-end;
+        flex-wrap: wrap;
       }
 
       .card {
@@ -845,10 +875,11 @@ function cloneLabel(source: LabelData): LabelData {
         display: flex;
         align-items: center;
         gap: 8px;
+        flex-wrap: wrap;
       }
 
       .property__text {
-        flex: 1 1 auto;
+        flex: 1 1 160px;
         min-width: 0;
       }
 
@@ -991,6 +1022,39 @@ function cloneLabel(source: LabelData): LabelData {
         flex-wrap: wrap;
       }
 
+      /* En móvil los botones ocupan todo el ancho para ser fáciles de tocar. */
+      @media (max-width: 640px) {
+        .preview__savebar,
+        .preview__toolbar {
+          padding: 10px 12px;
+          gap: 10px;
+        }
+        .preview__name {
+          flex: 1 1 100%;
+        }
+        .preview__savebar-actions {
+          width: 100%;
+          justify-content: stretch;
+        }
+        .preview__savebar-actions .btn,
+        .preview__savebar-actions a.btn {
+          flex: 1 1 auto;
+          min-width: 0;
+          padding: 10px 12px;
+          font-size: 13px;
+          justify-content: center;
+        }
+        .preview__actions {
+          width: 100%;
+          margin-left: 0;
+          justify-content: stretch;
+        }
+        .preview__actions .btn {
+          flex: 1 1 auto;
+          padding: 10px 12px;
+        }
+      }
+
       .btn--primary {
         background: #4f46e5;
         border-color: #4338ca;
@@ -1028,6 +1092,15 @@ function cloneLabel(source: LabelData): LabelData {
         transform-origin: top left;
         width: fit-content;
         box-shadow: 0 10px 30px rgb(0 0 0 / 25%);
+      }
+
+      /* En móvil el fondo del preview usa menos padding y bordes más suaves
+         para que la etiqueta aproveche el ancho disponible. */
+      @media (max-width: 640px) {
+        .preview__scroll {
+          padding: 10px;
+          border-radius: 10px;
+        }
       }
 
       @media print {
