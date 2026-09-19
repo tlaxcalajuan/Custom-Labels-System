@@ -8,6 +8,16 @@ function clampPercent(value: number, min: number, max: number): number {
 }
 
 /**
+ * Ancho reservado (en `em` de la etiqueta) para la columna 2 (marca/título).
+ * Es una constante: independiente del texto y del `titleSize`, para que ni
+ * cambiar el texto ni mover el slider de tamaño afecte al resto de columnas.
+ */
+const TITLE_COLUMN_EM = 11;
+
+/** Line-height visual del título (mismo valor que en CSS: 0.82). */
+const TITLE_LINE_HEIGHT = 0.82;
+
+/**
  * Template de etiqueta de producto (frente + trasera en un solo desarrollo plano).
  * Es puramente presentacional: todo el contenido llega por el input `data`.
  */
@@ -136,15 +146,19 @@ function clampPercent(value: number, min: number, max: number): number {
         /* Al imprimir/exportar a PDF nativo, forzar impresión del fondo. */
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
-        /* Una sola grilla: la franja y el pie comparten columnas con el bloque Info. */
+        /* Grilla estable: la columna 2 (marca/título) tiene un ancho fijo
+           calculado con el título al 100%, para que al mover el slider de
+           tamaño del título NO se muevan las columnas 3 (centro) ni 4 (info). */
         display: grid;
-        grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 0.9fr);
+        grid-template-columns: auto var(--label-title-col) minmax(0, 1fr) minmax(0, 0.9fr);
         grid-template-rows: minmax(0, 1fr) auto auto auto;
         row-gap: 0.9em;
         column-gap: 1.4em;
         /* El margen interior llega como binding de estilo (padding en mm). */
         overflow: hidden;
         line-height: 1.25;
+        /* Radio configurable desde el editor (0 = esquinas rectas). */
+        border-radius: var(--label-radius);
       }
 
       /* Texto vertical (de abajo hacia arriba) */
@@ -248,7 +262,9 @@ function clampPercent(value: number, min: number, max: number): number {
         align-items: flex-end;
         gap: 0.1em;
         min-height: 0;
-        overflow: hidden;
+        /* Visible: si el usuario sube el título por encima del 100% el texto
+           puede extenderse visualmente sin ser recortado por el contenedor. */
+        overflow: visible;
       }
 
       .label__title {
@@ -543,7 +559,7 @@ export class LabelTemplateComponent {
 
   /** Variables CSS derivadas del tema y las medidas. */
   protected readonly cssVars = computed<Record<string, string>>(() => {
-    const { theme, widthMm, heightMm, transparentBackground } = this.data();
+    const { theme, widthMm, heightMm, transparentBackground, borderRadiusMm } = this.data();
     return {
       '--label-w': `${widthMm}mm`,
       '--label-h': `${heightMm}mm`,
@@ -555,6 +571,8 @@ export class LabelTemplateComponent {
       '--label-muted': theme.muted,
       '--label-highlight': theme.highlight,
       '--label-title-size': this.titleFontSize(),
+      '--label-title-col': this.titleColumnWidth(),
+      '--label-radius': `${Number.isFinite(borderRadiusMm) ? Math.max(0, borderRadiusMm) : 0}mm`,
     };
   });
 
@@ -565,20 +583,42 @@ export class LabelTemplateComponent {
   });
 
   /**
-   * Tamaño del título en `em`, inversamente proporcional a la cantidad de
-   * caracteres, para que ocupe la altura de la etiqueta sin desbordarse.
+   * Tamaño BASE del título en `em` (al 100% del slider): fija el `font-size`
+   * de modo que la palabra ocupe la altura disponible SIN sobrepasar el
+   * ancho reservado para la columna 2. Con ambos límites, ni el texto ni el
+   * slider alteran el layout del resto de columnas.
    */
-  protected readonly titleFontSize = computed(() => {
-    const { title, heightMm, paddingMm, titleSize } = this.data();
+  private readonly titleBaseEm = computed(() => {
+    const { title, heightMm, paddingMm } = this.data();
     const chars = Math.max(title.trim().length, 1);
     const unitMm = heightMm * 0.0145; // 1em expresado en mm
     const reservedEm = 9.6; // franja + línea + pie + separaciones
     const availableEm = (heightMm - paddingMm * 2) / unitMm - reservedEm;
     const perCharEm = 0.74; // avance medio por carácter en mayúsculas
-    const scale = clampPercent(titleSize, 30, 200) / 100;
-    const em = (availableEm / (chars * perCharEm)) * 0.97 * scale;
-    return `${Math.min(24, Math.max(1.5, em)).toFixed(2)}em`;
+    // Límite por altura disponible (varía con la cantidad de caracteres).
+    const heightBasedEm = (availableEm / (chars * perCharEm)) * 0.97;
+    // Límite por ancho de la columna 2 (constante): así títulos con pocos
+    // caracteres no se hacen más anchos que la columna reservada.
+    const columnBasedEm = TITLE_COLUMN_EM / TITLE_LINE_HEIGHT;
+    const em = Math.min(heightBasedEm, columnBasedEm);
+    return Math.min(24, Math.max(1.5, em));
   });
+
+  /**
+   * Tamaño real del título aplicando el slider del usuario (30%–200%).
+   * Al superar el 100%, el texto puede excederse visualmente de la columna
+   * sin recortarse (ver `overflow: visible` en `.label__brand`).
+   */
+  protected readonly titleFontSize = computed(() => {
+    const scale = clampPercent(this.data().titleSize, 30, 200) / 100;
+    return `${(this.titleBaseEm() * scale).toFixed(2)}em`;
+  });
+
+  /**
+   * Ancho de la columna 2 (marca/título). Constante en `em`, así ni el texto
+   * del título ni su tamaño afectan a las columnas 3 (centro) o 4 (info).
+   */
+  protected readonly titleColumnWidth = computed(() => `${TITLE_COLUMN_EM}em`);
 
   /** Tamaño del nombre en español, en `em`, según su porcentaje de ajuste. */
   protected readonly productSpanishFontSize = computed(

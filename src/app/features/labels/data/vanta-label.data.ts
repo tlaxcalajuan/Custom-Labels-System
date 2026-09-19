@@ -76,4 +76,5 @@ export const VANTA_LABEL: LabelData = {
   widthMm: 200,
   heightMm: 129,
   paddingMm: 8,
+  borderRadiusMm: 0,
 };

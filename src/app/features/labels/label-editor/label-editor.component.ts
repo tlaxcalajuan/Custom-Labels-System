@@ -512,6 +512,19 @@ function cloneLabel(source: LabelData): LabelData {
             />
             <output>{{ label().paddingMm }} mm</output>
           </label>
+
+          <label class="field field--inline">
+            <span>Radio de borde</span>
+            <input
+              type="range"
+              min="0"
+              max="40"
+              step="0.5"
+              [ngModel]="label().borderRadiusMm"
+              (ngModelChange)="patch({ borderRadiusMm: +$event })"
+            />
+            <output>{{ label().borderRadiusMm }} mm</output>
+          </label>
         </div>
         </details>
 

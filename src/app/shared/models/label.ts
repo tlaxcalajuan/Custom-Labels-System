@@ -104,4 +104,6 @@ export interface LabelData {
   heightMm: number;
   /** Margen interior de la etiqueta en milímetros. */
   paddingMm: number;
+  /** Radio de las esquinas de la etiqueta, en milímetros (0 = esquinas rectas). */
+  borderRadiusMm: number;
 }
