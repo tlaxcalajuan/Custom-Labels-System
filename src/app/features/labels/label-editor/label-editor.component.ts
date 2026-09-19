@@ -7,11 +7,14 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LabelData, LabelInfoSection, LabelScale, LabelTheme } from '../../../shared/models/label';
 import { VANTA_LABEL } from '../data/vanta-label.data';
 import { LabelTemplateComponent } from '../label-template/label-template.component';
 import { LabelExportFormat, LabelExportService } from '../services/label-export.service';
+import { LabelCatalogService } from '../services/label-catalog.service';
 
 /**
  * Normaliza una propiedad a `LabelProperty`. Tolera formatos viejos
@@ -58,7 +61,7 @@ function cloneLabel(source: LabelData): LabelData {
 @Component({
   selector: 'app-label-editor',
   standalone: true,
-  imports: [FormsModule, LabelTemplateComponent],
+  imports: [FormsModule, RouterLink, LabelTemplateComponent],
   template: `
     <div class="editor">
       <aside class="editor__panel">
@@ -544,6 +547,30 @@ function cloneLabel(source: LabelData): LabelData {
       </aside>
 
       <section class="preview">
+        <div class="preview__savebar">
+          <label class="preview__name field">
+            <span>Nombre de la etiqueta</span>
+            <input
+              type="text"
+              placeholder="Ej. VANTA 500ml"
+              [ngModel]="labelName()"
+              (ngModelChange)="labelName.set($event)"
+            />
+          </label>
+          <div class="preview__savebar-actions">
+            @if (savedAt(); as saved) {
+              <span class="preview__saved" role="status">Guardada {{ saved }}</span>
+            }
+            <button type="button" class="btn btn--primary" (click)="save()">
+              {{ currentId() ? 'Guardar cambios' : 'Guardar etiqueta' }}
+            </button>
+            @if (currentId()) {
+              <button type="button" class="btn" (click)="saveAsNew()">Guardar como…</button>
+            }
+            <a class="btn" routerLink="/labels/catalog">Ir al catálogo</a>
+          </div>
+        </div>
+
         <div class="preview__toolbar">
           <label class="field field--inline">
             <span>Zoom</span>
@@ -906,6 +933,45 @@ function cloneLabel(source: LabelData): LabelData {
         padding: 10px 14px;
       }
 
+      .preview__savebar {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px 14px;
+        flex-wrap: wrap;
+      }
+
+      .preview__name {
+        flex: 1 1 260px;
+        min-width: 220px;
+      }
+
+      .preview__savebar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .preview__saved {
+        font-size: 12px;
+        color: #059669;
+        padding: 0 4px;
+      }
+
+      .btn--primary {
+        background: #4f46e5;
+        border-color: #4338ca;
+        color: #fff;
+      }
+
+      .btn--primary:hover:not(:disabled) {
+        background: #4338ca;
+      }
+
       .preview__actions {
         display: flex;
         align-items: center;
@@ -941,7 +1007,8 @@ function cloneLabel(source: LabelData): LabelData {
         }
 
         .editor__panel,
-        .preview__toolbar {
+        .preview__toolbar,
+        .preview__savebar {
           display: none;
         }
 
@@ -962,8 +1029,116 @@ function cloneLabel(source: LabelData): LabelData {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LabelEditorComponent {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly catalog = inject(LabelCatalogService);
+
   /** Estado editable de la etiqueta. */
   readonly label = signal<LabelData>(cloneLabel(VANTA_LABEL));
+
+  /** Id de la entrada del catálogo cargada (null = etiqueta nueva). */
+  readonly currentId = signal<string | null>(null);
+
+  /** Nombre editable para guardar en el catálogo. */
+  readonly labelName = signal<string>('');
+
+  /** Texto relativo de "guardada hace…" para dar feedback al usuario. */
+  readonly savedAt = signal<string | null>(null);
+
+  constructor() {
+    // Reacciona a cambios en :id: si estamos navegando entre etiquetas
+    // guardadas (edit/1 → edit/2), se recarga automáticamente.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const id = params.get('id');
+      if (id) {
+        this.loadFromCatalog(id);
+      } else if (this.currentId() !== null) {
+        // Volvimos a /labels (sin id): desasocia la entrada activa.
+        this.reset();
+      }
+    });
+  }
+
+  /** Carga la etiqueta guardada por id desde el catálogo. */
+  private loadFromCatalog(id: string): void {
+    const entry = this.catalog.get(id);
+    if (!entry) {
+      // Id inválido: se limpia y se navega al catálogo.
+      this.router.navigate(['/labels/catalog']);
+      return;
+    }
+    this.label.set(cloneLabel(entry.data));
+    this.currentId.set(entry.id);
+    this.labelName.set(entry.name);
+    this.savedAt.set(this.formatRelative(entry.updatedAt));
+    this.draftJson.set(null);
+    this.jsonError.set(null);
+  }
+
+  /**
+   * Guarda la etiqueta. Si ya existe (`currentId`), actualiza esa entrada.
+   * Si no hay nombre en el input, se pregunta al usuario (usa el título como
+   * sugerencia). Así el botón siempre es clicable y no queda oculto.
+   */
+  save(): void {
+    let name = this.labelName().trim();
+    if (!name) {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      const suggestion = this.label().title?.trim() || 'Etiqueta';
+      const answer = window.prompt('Nombre de la etiqueta', suggestion);
+      if (!answer || !answer.trim()) {
+        return;
+      }
+      name = answer.trim();
+      this.labelName.set(name);
+    }
+    const entry = this.catalog.save(name, this.label(), this.currentId() ?? undefined);
+    this.currentId.set(entry.id);
+    this.labelName.set(entry.name);
+    this.savedAt.set(this.formatRelative(entry.updatedAt));
+    if (!this.route.snapshot.paramMap.get('id')) {
+      // Actualiza la URL para que la ruta refleje la entrada creada.
+      this.router.navigate(['/labels/edit', entry.id], { replaceUrl: true });
+    }
+  }
+
+  /** Guarda siempre como nueva entrada (aunque haya un `currentId` activo). */
+  saveAsNew(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const suggestion = this.labelName().trim() || this.label().title || 'Etiqueta';
+    const name = window.prompt('Nombre para la nueva etiqueta', `${suggestion} (copia)`);
+    if (!name || !name.trim()) {
+      return;
+    }
+    const entry = this.catalog.save(name, this.label());
+    this.currentId.set(entry.id);
+    this.labelName.set(entry.name);
+    this.savedAt.set(this.formatRelative(entry.updatedAt));
+    this.router.navigate(['/labels/edit', entry.id], { replaceUrl: true });
+  }
+
+  /** Convierte un ISO a un texto humano ("hace 3 min", "hace 2 h"). */
+  private formatRelative(iso: string): string {
+    const then = new Date(iso).getTime();
+    if (!Number.isFinite(then)) {
+      return 'recién';
+    }
+    const diffSec = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (diffSec < 60) return 'hace instantes';
+    const diffMin = Math.round(diffSec / 60);
+    if (diffMin < 60) return `hace ${diffMin} min`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `hace ${diffH} h`;
+    return new Date(iso).toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
 
   /** Iconos frecuentes para usar como viñeta de propiedades. */
   readonly iconSuggestions: readonly string[] = [
@@ -1134,11 +1309,14 @@ export class LabelEditorComponent {
     }
   }
 
-  /** Restablece los datos de ejemplo. */
+  /** Restablece los datos de ejemplo y desasocia de la entrada del catálogo. */
   reset(): void {
     this.label.set(cloneLabel(VANTA_LABEL));
     this.draftJson.set(null);
     this.jsonError.set(null);
+    this.currentId.set(null);
+    this.labelName.set('');
+    this.savedAt.set(null);
   }
 
   /** Abre el diálogo de impresión del navegador. */

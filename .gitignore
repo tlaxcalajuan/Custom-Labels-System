@@ -42,3 +42,7 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Etiquetas guardadas por el servidor Express (data/labels/<id>.json).
+# Cambia con LABELS_DATA_DIR si quieres usar otra ubicación.
+/data/
