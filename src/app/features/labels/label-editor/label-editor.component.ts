@@ -15,6 +15,7 @@ import { VANTA_LABEL } from '../data/vanta-label.data';
 import { LabelTemplateComponent } from '../label-template/label-template.component';
 import { LabelExportFormat, LabelExportService } from '../services/label-export.service';
 import { LabelCatalogService } from '../services/label-catalog.service';
+import { ToastService } from '../../../shared/ui/toast/toast.service';
 
 /**
  * Normaliza una propiedad a `LabelProperty`. Tolera formatos viejos
@@ -558,15 +559,9 @@ function cloneLabel(source: LabelData): LabelData {
             />
           </label>
           <div class="preview__savebar-actions">
-            @if (savedAt(); as saved) {
-              <span class="preview__saved" role="status">Guardada {{ saved }}</span>
-            }
             <button type="button" class="btn btn--primary" (click)="save()">
               {{ currentId() ? 'Guardar cambios' : 'Guardar etiqueta' }}
             </button>
-            @if (currentId()) {
-              <button type="button" class="btn" (click)="saveAsNew()">Guardar como…</button>
-            }
             <a class="btn" routerLink="/labels/catalog">Ir al catálogo</a>
           </div>
         </div>
@@ -956,12 +951,6 @@ function cloneLabel(source: LabelData): LabelData {
         flex-wrap: wrap;
       }
 
-      .preview__saved {
-        font-size: 12px;
-        color: #059669;
-        padding: 0 4px;
-      }
-
       .btn--primary {
         background: #4f46e5;
         border-color: #4338ca;
@@ -1032,6 +1021,7 @@ export class LabelEditorComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly catalog = inject(LabelCatalogService);
+  private readonly toast = inject(ToastService);
 
   /** Estado editable de la etiqueta. */
   readonly label = signal<LabelData>(cloneLabel(VANTA_LABEL));
@@ -1041,9 +1031,6 @@ export class LabelEditorComponent {
 
   /** Nombre editable para guardar en el catálogo. */
   readonly labelName = signal<string>('');
-
-  /** Texto relativo de "guardada hace…" para dar feedback al usuario. */
-  readonly savedAt = signal<string | null>(null);
 
   constructor() {
     // Reacciona a cambios en :id: si estamos navegando entre etiquetas
@@ -1070,7 +1057,6 @@ export class LabelEditorComponent {
     this.label.set(cloneLabel(entry.data));
     this.currentId.set(entry.id);
     this.labelName.set(entry.name);
-    this.savedAt.set(this.formatRelative(entry.updatedAt));
     this.draftJson.set(null);
     this.jsonError.set(null);
   }
@@ -1094,50 +1080,17 @@ export class LabelEditorComponent {
       name = answer.trim();
       this.labelName.set(name);
     }
+    const wasNew = !this.currentId();
     const entry = this.catalog.save(name, this.label(), this.currentId() ?? undefined);
     this.currentId.set(entry.id);
     this.labelName.set(entry.name);
-    this.savedAt.set(this.formatRelative(entry.updatedAt));
+    this.toast.success(
+      wasNew ? `Etiqueta "${entry.name}" guardada` : `Cambios guardados en "${entry.name}"`,
+    );
     if (!this.route.snapshot.paramMap.get('id')) {
       // Actualiza la URL para que la ruta refleje la entrada creada.
       this.router.navigate(['/labels/edit', entry.id], { replaceUrl: true });
     }
-  }
-
-  /** Guarda siempre como nueva entrada (aunque haya un `currentId` activo). */
-  saveAsNew(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const suggestion = this.labelName().trim() || this.label().title || 'Etiqueta';
-    const name = window.prompt('Nombre para la nueva etiqueta', `${suggestion} (copia)`);
-    if (!name || !name.trim()) {
-      return;
-    }
-    const entry = this.catalog.save(name, this.label());
-    this.currentId.set(entry.id);
-    this.labelName.set(entry.name);
-    this.savedAt.set(this.formatRelative(entry.updatedAt));
-    this.router.navigate(['/labels/edit', entry.id], { replaceUrl: true });
-  }
-
-  /** Convierte un ISO a un texto humano ("hace 3 min", "hace 2 h"). */
-  private formatRelative(iso: string): string {
-    const then = new Date(iso).getTime();
-    if (!Number.isFinite(then)) {
-      return 'recién';
-    }
-    const diffSec = Math.max(0, Math.round((Date.now() - then) / 1000));
-    if (diffSec < 60) return 'hace instantes';
-    const diffMin = Math.round(diffSec / 60);
-    if (diffMin < 60) return `hace ${diffMin} min`;
-    const diffH = Math.round(diffMin / 60);
-    if (diffH < 24) return `hace ${diffH} h`;
-    return new Date(iso).toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
   }
 
   /** Iconos frecuentes para usar como viñeta de propiedades. */
@@ -1316,7 +1269,6 @@ export class LabelEditorComponent {
     this.jsonError.set(null);
     this.currentId.set(null);
     this.labelName.set('');
-    this.savedAt.set(null);
   }
 
   /** Abre el diálogo de impresión del navegador. */
