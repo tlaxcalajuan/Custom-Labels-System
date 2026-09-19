@@ -1,8 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LabelData, LabelInfoSection, LabelScale, LabelTheme } from '../../../shared/models/label';
 import { VANTA_LABEL } from '../data/vanta-label.data';
 import { LabelTemplateComponent } from '../label-template/label-template.component';
+import { LabelExportFormat, LabelExportService } from '../services/label-export.service';
 
 /** Clona los datos de etiqueta sin compartir referencias. */
 function cloneLabel(source: LabelData): LabelData {
@@ -434,11 +443,41 @@ function cloneLabel(source: LabelData): LabelData {
             />
             <output>{{ zoomPercent() }}%</output>
           </label>
-          <button type="button" class="btn" (click)="print()">Imprimir / PDF</button>
+          <div class="preview__actions">
+            <button
+              type="button"
+              class="btn"
+              [disabled]="isExporting()"
+              (click)="exportAs('png')"
+            >
+              PNG
+            </button>
+            <button
+              type="button"
+              class="btn"
+              [disabled]="isExporting()"
+              (click)="exportAs('jpg')"
+            >
+              JPG
+            </button>
+            <button
+              type="button"
+              class="btn"
+              [disabled]="isExporting()"
+              (click)="exportAs('pdf')"
+            >
+              PDF
+            </button>
+            <button type="button" class="btn" (click)="print()">Imprimir</button>
+          </div>
         </div>
 
+        @if (exportError()) {
+          <p class="preview__error" role="alert">{{ exportError() }}</p>
+        }
+
         <div class="preview__scroll">
-          <div class="preview__stage" [style.transform]="'scale(' + zoom() + ')'">
+          <div #stage class="preview__stage" [style.transform]="'scale(' + zoom() + ')'">
             <app-label-template [data]="label()" />
           </div>
         </div>
@@ -592,11 +631,28 @@ function cloneLabel(source: LabelData): LabelData {
       .preview__toolbar {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 16px;
         background: #fff;
         border: 1px solid #e5e7eb;
         border-radius: 10px;
         padding: 10px 14px;
+      }
+
+      .preview__actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+      }
+
+      .preview__error {
+        margin: -4px 0 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #fee2e2;
+        color: #991b1b;
+        font-size: 13px;
       }
 
       .preview__scroll {
@@ -643,7 +699,7 @@ export class LabelEditorComponent {
   readonly label = signal<LabelData>(cloneLabel(VANTA_LABEL));
 
   /** Zoom de la vista previa. */
-  readonly zoom = signal(0.75);
+  readonly zoom = signal(1);
 
   /** JSON editado manualmente (null = sincronizado con el estado). */
   readonly draftJson = signal<string | null>(null);
@@ -771,5 +827,69 @@ export class LabelEditorComponent {
   /** Abre el diálogo de impresión del navegador. */
   print(): void {
     window.print();
+  }
+
+  /** Referencia al contenedor de la vista previa (contiene el DOM real de la etiqueta). */
+  private readonly stage = viewChild.required<ElementRef<HTMLElement>>('stage');
+
+  /** Servicio de exportación DOM → PNG/JPG/PDF. */
+  private readonly exportService = inject(LabelExportService);
+
+  /** True mientras corre un export (para deshabilitar botones). */
+  readonly isExporting = signal(false);
+
+  /** Último error de exportación (mostrado como alerta). */
+  readonly exportError = signal<string | null>(null);
+
+  /** Exporta la etiqueta en el formato pedido. */
+  async exportAs(format: LabelExportFormat): Promise<void> {
+    const stageEl = this.stage().nativeElement;
+    const node = stageEl.querySelector<HTMLElement>('[data-label-export]');
+    if (!node) {
+      this.exportError.set('No se encontró la etiqueta para exportar.');
+      return;
+    }
+
+    this.isExporting.set(true);
+    this.exportError.set(null);
+    const previousTransform = stageEl.style.transform;
+    // Neutraliza el zoom durante la captura para no perder resolución.
+    stageEl.style.transform = 'none';
+    try {
+      const data = this.label();
+      await this.exportService.export(node, format, {
+        fileName: this.sanitizeFileName(data.title),
+        widthMm: data.widthMm,
+        heightMm: data.heightMm,
+        background: data.theme.background,
+      });
+    } catch (error) {
+      this.exportError.set(
+        error instanceof Error ? error.message : 'No se pudo exportar la etiqueta.',
+      );
+    } finally {
+      stageEl.style.transform = previousTransform;
+      this.isExporting.set(false);
+    }
+  }
+
+  /** Convierte el título en un nombre de archivo válido, con fallback. */
+  private sanitizeFileName(title: string): string {
+    const base = title
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return `${base || 'etiqueta'}_${this.timestamp()}`;
+  }
+
+  /** Timestamp compacto YYYYMMDD_HHmm para diferenciar archivos. */
+  private timestamp(): string {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return (
+      `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+      `_${pad(now.getHours())}${pad(now.getMinutes())}`
+    );
   }
 }

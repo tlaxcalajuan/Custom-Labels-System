@@ -15,7 +15,7 @@ function clampPercent(value: number, min: number, max: number): number {
   selector: 'app-label-template',
   standalone: true,
   template: `
-    <div class="label" [style]="cssVars()" [style.padding]="paddingValue()">
+    <div class="label" data-label-export [style]="cssVars()" [style.padding]="paddingValue()">
       <!-- Lateral: descripción vertical + línea de propiedades + escala -->
       <div class="label__side">
         <!-- Ambos textos verticales comparten el mismo arranque inferior -->
@@ -119,6 +119,9 @@ function clampPercent(value: number, min: number, max: number): number {
         font-family: 'Leelawadee UI', 'Segoe UI', 'Trebuchet MS', 'Helvetica Neue', Arial, sans-serif;
         background: var(--label-bg);
         color: var(--label-text);
+        /* Al imprimir/exportar a PDF nativo, forzar impresión del fondo. */
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
         /* Una sola grilla: la franja y el pie comparten columnas con el bloque Info. */
         display: grid;
         grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 0.9fr);
