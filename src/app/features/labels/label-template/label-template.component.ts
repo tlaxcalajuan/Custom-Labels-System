@@ -26,6 +26,24 @@ const TITLE_LINE_HEIGHT = 0.82;
   standalone: true,
   template: `
     <div class="label" data-label-export [style]="cssVars()" [style.padding]="paddingValue()">
+      <!-- Definiciones de filtros SVG: aplican tinte al canal alfa del PNG. -->
+      <svg class="label__filters" aria-hidden="true" width="0" height="0" focusable="false">
+        <defs>
+          @if (data().logoTint; as tint) {
+            <filter [attr.id]="mainTintFilterId" color-interpolation-filters="sRGB">
+              <feFlood [attr.flood-color]="tint" flood-opacity="1" />
+              <feComposite in2="SourceAlpha" operator="in" />
+            </filter>
+          }
+          @if (data().footerLogoTint; as tint) {
+            <filter [attr.id]="footerTintFilterId" color-interpolation-filters="sRGB">
+              <feFlood [attr.flood-color]="tint" flood-opacity="1" />
+              <feComposite in2="SourceAlpha" operator="in" />
+            </filter>
+          }
+        </defs>
+      </svg>
+
       <!-- Lateral: descripción vertical + línea de propiedades + escala -->
       <div class="label__side">
         <!-- Ambos textos verticales comparten el mismo arranque inferior -->
@@ -64,7 +82,12 @@ const TITLE_LINE_HEIGHT = 0.82;
             [style.height.%]="data().logoSize"
           >
             @if (data().logoUrl) {
-              <img class="label__logo-img" [src]="data().logoUrl" [alt]="data().company" />
+              <img
+                class="label__logo-img"
+                [src]="data().logoUrl"
+                [alt]="data().company"
+                [style.filter]="mainTintFilter()"
+              />
             } @else {
               <span class="label__logo-slot">LOGO</span>
             }
@@ -116,7 +139,12 @@ const TITLE_LINE_HEIGHT = 0.82;
         <div class="label__footer-brand">
           <span class="label__footer-mark" [style.height.em]="footerMarkHeight()">
             @if (data().footerLogoUrl) {
-              <img class="label__logo-img" [src]="data().footerLogoUrl" [alt]="data().company" />
+              <img
+                class="label__logo-img"
+                [src]="data().footerLogoUrl"
+                [alt]="data().company"
+                [style.filter]="footerTintFilter()"
+              />
             } @else {
               <span class="label__logo-slot label__logo-slot--sm">LOGO</span>
             }
@@ -324,6 +352,15 @@ const TITLE_LINE_HEIGHT = 0.82;
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
+      }
+
+      /* SVG con los <filter> de tinte. Ocupa 0×0 y no interfiere con el layout. */
+      .label__filters {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+        pointer-events: none;
       }
 
       .label__logo-slot {
@@ -539,7 +576,9 @@ const TITLE_LINE_HEIGHT = 0.82;
 
       .label__content {
         grid-row: 2;
-        grid-column: 1 / 4;
+        /* Empieza en la columna 2 igual que .label__product-es, para que
+           ambos elementos queden alineados verticalmente en la etiqueta. */
+        grid-column: 2 / 4;
         font-size: 1.7em;
         color: var(--label-accent);
       }
@@ -556,6 +595,26 @@ const TITLE_LINE_HEIGHT = 0.82;
 export class LabelTemplateComponent {
   /** Contenido y estilo de la etiqueta. */
   readonly data = input.required<LabelData>();
+
+  /**
+   * Sufijo aleatorio para que los ids de los `<filter>` sean únicos cuando
+   * hay varias instancias del template en la misma página (p.ej. cards del
+   * catálogo). Los ids SVG deben ser únicos a nivel de documento.
+   */
+  private readonly instanceSuffix = Math.random().toString(36).slice(2, 8);
+
+  /** Id del filtro de tinte del logo principal. */
+  protected readonly mainTintFilterId = `label-main-tint-${this.instanceSuffix}`;
+  /** Id del filtro de tinte del logo del pie. */
+  protected readonly footerTintFilterId = `label-footer-tint-${this.instanceSuffix}`;
+
+  /** Referencia CSS al filtro para aplicar como `filter: url(#...)`. */
+  protected readonly mainTintFilter = computed(() =>
+    this.data().logoTint ? `url(#${this.mainTintFilterId})` : null,
+  );
+  protected readonly footerTintFilter = computed(() =>
+    this.data().footerLogoTint ? `url(#${this.footerTintFilterId})` : null,
+  );
 
   /** Variables CSS derivadas del tema y las medidas. */
   protected readonly cssVars = computed<Record<string, string>>(() => {

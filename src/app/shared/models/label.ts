@@ -86,10 +86,18 @@ export interface LabelData {
   logoUrl: string | null;
   /** Tamaño del logo principal, en % del área disponible (10–100). */
   logoSize: number;
+  /**
+   * Tinte opcional para el logo principal. Cuando está definido, la silueta
+   * del PNG (canal alfa) se rellena con este color mediante un filtro SVG.
+   * `null` deja el logo con sus propios colores.
+   */
+  logoTint?: string | null;
   /** URL o data URL del logo del pie. `null` deja el espacio reservado. */
   footerLogoUrl: string | null;
   /** Tamaño del logo del pie, en % respecto de su alto base (30–300). */
   footerLogoSize: number;
+  /** Tinte opcional para el logo del pie (mismo mecanismo que `logoTint`). */
+  footerLogoTint?: string | null;
   /** Paleta de color. */
   theme: LabelTheme;
   /**

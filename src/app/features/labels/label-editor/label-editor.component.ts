@@ -321,6 +321,26 @@ function cloneLabel(source: LabelData): LabelData {
             <output>{{ label().logoSize }}%</output>
           </label>
 
+          <label class="field field--inline">
+            <input
+              type="checkbox"
+              [ngModel]="!!label().logoTint"
+              (ngModelChange)="toggleLogoTint('logoTint', $event)"
+            />
+            <span>Aplicar tinte de color (usa el alfa del PNG)</span>
+          </label>
+
+          @if (label().logoTint; as tint) {
+            <label class="field field--inline">
+              <input
+                type="color"
+                [ngModel]="tint"
+                (ngModelChange)="patch({ logoTint: $event })"
+              />
+              <span>Color del logo principal</span>
+            </label>
+          }
+
           @if (label().logoUrl) {
             <button type="button" class="btn" (click)="patch({ logoUrl: null })">
               Quitar logo principal
@@ -360,6 +380,26 @@ function cloneLabel(source: LabelData): LabelData {
             />
             <output>{{ label().footerLogoSize }}%</output>
           </label>
+
+          <label class="field field--inline">
+            <input
+              type="checkbox"
+              [ngModel]="!!label().footerLogoTint"
+              (ngModelChange)="toggleLogoTint('footerLogoTint', $event)"
+            />
+            <span>Aplicar tinte de color (usa el alfa del PNG)</span>
+          </label>
+
+          @if (label().footerLogoTint; as tint) {
+            <label class="field field--inline">
+              <input
+                type="color"
+                [ngModel]="tint"
+                (ngModelChange)="patch({ footerLogoTint: $event })"
+              />
+              <span>Color del logo del pie</span>
+            </label>
+          }
 
           @if (label().footerLogoUrl) {
             <button type="button" class="btn" (click)="patch({ footerLogoUrl: null })">
@@ -1150,6 +1190,20 @@ export class LabelEditorComponent {
     this.patch({
       scale: enabled ? (VANTA_LABEL.scale ? { ...VANTA_LABEL.scale } : null) : null,
     });
+  }
+
+  /**
+   * Activa o desactiva el tinte de color en un logo. Cuando se activa, usa
+   * el color de acento del tema como valor inicial; cuando se desactiva,
+   * limpia el campo (`null`) para volver al color original del PNG.
+   */
+  toggleLogoTint(key: 'logoTint' | 'footerLogoTint', enabled: boolean): void {
+    const fallback = this.label().theme.accent || '#ffffff';
+    if (key === 'logoTint') {
+      this.patch({ logoTint: enabled ? fallback : null });
+    } else {
+      this.patch({ footerLogoTint: enabled ? fallback : null });
+    }
   }
 
   addProperty(): void {

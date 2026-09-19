@@ -63,8 +63,10 @@ export const VANTA_LABEL: LabelData = {
   companyTagline: 'Moto & Car Care',
   logoUrl: '/assets/imgs/logo_principal.png',
   logoSize: 85,
+  logoTint: null,
   footerLogoUrl: '/assets/imgs/logo_pie.png',
   footerLogoSize: 110,
+  footerLogoTint: null,
   theme: {
     background: '#000000',
     accent: '#d6e021',
