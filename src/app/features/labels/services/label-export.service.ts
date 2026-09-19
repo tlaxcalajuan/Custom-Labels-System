@@ -15,6 +15,11 @@ export interface LabelExportOptions {
   heightMm: number;
   /** Color de fondo. Se aplica también al JPG que no soporta transparencia. */
   background: string;
+  /**
+   * Si es `true`, PNG y PDF se exportan con fondo transparente. Como JPG no
+   * admite transparencia, se sustituye por blanco al exportar en ese formato.
+   */
+  transparent?: boolean;
   /** Multiplicador de resolución. 3 ≈ 300dpi a las medidas dadas. */
   pixelRatio?: number;
 }
@@ -32,13 +37,17 @@ export class LabelExportService {
     options: LabelExportOptions,
   ): Promise<void> {
     const pixelRatio = options.pixelRatio ?? 3;
+    // Cuando la etiqueta se exporta transparente, no pintamos fondo en PNG/PDF.
+    // JPG no soporta transparencia: usamos blanco como fallback.
+    const rasterBackground = options.transparent ? undefined : options.background;
+    const jpgBackground = options.transparent ? '#ffffff' : options.background;
 
     switch (format) {
       case 'png': {
         const dataUrl = await toPng(node, {
           pixelRatio,
           cacheBust: true,
-          backgroundColor: options.background,
+          backgroundColor: rasterBackground,
         });
         this.download(dataUrl, `${options.fileName}.png`);
         return;
@@ -48,7 +57,7 @@ export class LabelExportService {
           pixelRatio,
           cacheBust: true,
           quality: 0.95,
-          backgroundColor: options.background,
+          backgroundColor: jpgBackground,
         });
         this.download(dataUrl, `${options.fileName}.jpg`);
         return;
@@ -57,7 +66,7 @@ export class LabelExportService {
         const dataUrl = await toPng(node, {
           pixelRatio,
           cacheBust: true,
-          backgroundColor: options.background,
+          backgroundColor: rasterBackground,
         });
         const orientation = options.widthMm >= options.heightMm ? 'landscape' : 'portrait';
         const pdf = new jsPDF({

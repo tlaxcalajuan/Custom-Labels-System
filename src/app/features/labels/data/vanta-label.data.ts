@@ -13,7 +13,14 @@ export const VANTA_LABEL: LabelData = {
   titleSize: 85,
   productSpanishSize: 100,
   subtitle: 'AGITE SUAVEMENTE ANTES DE USAR',
-  properties: ['LIMPIEZA PROFUNDA', 'ELIMINA RESIDUOS', 'ESPUMA ACTIVA', 'ACABADO MATE'],
+  properties: [
+    { text: 'LIMPIEZA PROFUNDA', icon: 'water_drop' },
+    { text: 'ELIMINA RESIDUOS', icon: 'auto_awesome' },
+    { text: 'ESPUMA ACTIVA', icon: 'bubble_chart' },
+    { text: 'ACABADO MATE', icon: 'shield' },
+  ],
+  propertyBullet: 'dot',
+  propertyIcon: 'check_circle',
   info: [
     {
       heading: 'SUPERFICIES - ZONAS DE APLICACIÓN',
@@ -65,6 +72,7 @@ export const VANTA_LABEL: LabelData = {
     muted: '#e6e6e6',
     highlight: '#4b3ce0',
   },
+  transparentBackground: false,
   widthMm: 200,
   heightMm: 129,
   paddingMm: 8,

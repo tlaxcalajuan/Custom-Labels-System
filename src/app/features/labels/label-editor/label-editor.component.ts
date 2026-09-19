@@ -13,11 +13,39 @@ import { VANTA_LABEL } from '../data/vanta-label.data';
 import { LabelTemplateComponent } from '../label-template/label-template.component';
 import { LabelExportFormat, LabelExportService } from '../services/label-export.service';
 
+/**
+ * Normaliza una propiedad a `LabelProperty`. Tolera formatos viejos
+ * (string) o corruptos (objeto con índices numéricos, sin `text`).
+ */
+function normalizeProperty(value: unknown): { text: string; icon?: string } {
+  if (typeof value === 'string') {
+    return { text: value };
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const text = typeof record['text'] === 'string' ? (record['text'] as string) : '';
+    const icon = typeof record['icon'] === 'string' ? (record['icon'] as string) : undefined;
+    // Si `text` está vacío pero el objeto tiene índices numéricos (spread de string),
+    // reconstruye la cadena a partir de esos índices.
+    if (!text) {
+      const chars = Object.keys(record)
+        .filter((k) => /^\d+$/.test(k))
+        .sort((a, b) => Number(a) - Number(b))
+        .map((k) => String(record[k]));
+      if (chars.length) {
+        return icon ? { text: chars.join(''), icon } : { text: chars.join('') };
+      }
+    }
+    return icon ? { text, icon } : { text };
+  }
+  return { text: '' };
+}
+
 /** Clona los datos de etiqueta sin compartir referencias. */
 function cloneLabel(source: LabelData): LabelData {
   return {
     ...source,
-    properties: [...source.properties],
+    properties: source.properties.map(normalizeProperty),
     info: source.info.map((section) => ({ ...section })),
     scale: source.scale ? { ...source.scale } : null,
     theme: { ...source.theme },
@@ -36,8 +64,9 @@ function cloneLabel(source: LabelData): LabelData {
       <aside class="editor__panel">
         <h2 class="editor__title">Contenido de la etiqueta</h2>
 
-        <fieldset class="group">
-          <legend>Identidad</legend>
+        <details class="group" open>
+          <summary class="group__legend">Identidad</summary>
+          <div class="group__body">
 
           <label class="field">
             <span>Title</span>
@@ -105,18 +134,63 @@ function cloneLabel(source: LabelData): LabelData {
               (ngModelChange)="patch({ description: $event })"
             ></textarea>
           </label>
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Properties (puntos)</legend>
+        <details class="group" open>
+          <summary class="group__legend">Properties (puntos)</summary>
+          <div class="group__body">
+
+          <label class="field">
+            <span>Viñeta</span>
+            <select
+              [ngModel]="label().propertyBullet"
+              (ngModelChange)="patch({ propertyBullet: $event })"
+            >
+              <option value="dot">Punto</option>
+              <option value="icon">Icono (Material Symbols)</option>
+              <option value="none">Sin viñeta</option>
+            </select>
+          </label>
+
+          @if (label().propertyBullet === 'icon') {
+            <small class="field__hint">
+              Elige el ícono en cada propiedad. Puedes ampliar la lista buscando nombres en
+              <a href="https://fonts.google.com/icons" target="_blank" rel="noopener"
+                >fonts.google.com/icons</a
+              >.
+            </small>
+          }
 
           @for (property of label().properties; track $index) {
-            <div class="row">
+            <div class="property">
+              @if (label().propertyBullet === 'icon') {
+                <label
+                  class="property__icon-picker"
+                  [attr.aria-label]="'Ícono de la propiedad ' + ($index + 1)"
+                >
+                  <span
+                    class="material-symbols-rounded property__icon-preview"
+                    aria-hidden="true"
+                    >{{ property.icon || label().propertyIcon }}</span
+                  >
+                  <select
+                    [ngModel]="property.icon ?? ''"
+                    (ngModelChange)="updatePropertyIcon($index, $event)"
+                  >
+                    <option value="">(por defecto)</option>
+                    @for (name of iconSuggestions; track name) {
+                      <option [value]="name">{{ name }}</option>
+                    }
+                  </select>
+                </label>
+              }
               <input
                 type="text"
+                class="property__text"
                 [attr.aria-label]="'Propiedad ' + ($index + 1)"
-                [ngModel]="property"
-                (ngModelChange)="updateProperty($index, $event)"
+                [ngModel]="property.text"
+                (ngModelChange)="updatePropertyText($index, $event)"
               />
               <button type="button" class="btn btn--icon" (click)="removeProperty($index)">
                 Quitar
@@ -125,10 +199,12 @@ function cloneLabel(source: LabelData): LabelData {
           }
 
           <button type="button" class="btn" (click)="addProperty()">+ Agregar propiedad</button>
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Info (etiqueta trasera)</legend>
+        <details class="group" open>
+          <summary class="group__legend">Info (etiqueta trasera)</summary>
+          <div class="group__body">
 
           @for (section of label().info; track $index) {
             <div class="card">
@@ -173,10 +249,12 @@ function cloneLabel(source: LabelData): LabelData {
           }
 
           <button type="button" class="btn" (click)="addInfo()">+ Agregar bloque</button>
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Contenido y marca</legend>
+        <details class="group" open>
+          <summary class="group__legend">Contenido y marca</summary>
+          <div class="group__body">
 
           <label class="field">
             <span>Contenido</span>
@@ -204,10 +282,12 @@ function cloneLabel(source: LabelData): LabelData {
               (ngModelChange)="patch({ companyTagline: $event })"
             />
           </label>
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Logo principal (centro)</legend>
+        <details class="group" open>
+          <summary class="group__legend">Logo principal (centro)</summary>
+          <div class="group__body">
 
           <label class="field">
             <span>Archivo</span>
@@ -242,10 +322,12 @@ function cloneLabel(source: LabelData): LabelData {
               Quitar logo principal
             </button>
           }
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Logo del pie</legend>
+        <details class="group" open>
+          <summary class="group__legend">Logo del pie</summary>
+          <div class="group__body">
 
           <label class="field">
             <span>Archivo</span>
@@ -280,10 +362,12 @@ function cloneLabel(source: LabelData): LabelData {
               Quitar logo del pie
             </button>
           }
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Escala (pH u otro indicador)</legend>
+        <details class="group" open>
+          <summary class="group__legend">Escala (pH u otro indicador)</summary>
+          <div class="group__body">
 
           <label class="field field--inline">
             <input type="checkbox" [ngModel]="!!label().scale" (ngModelChange)="toggleScale($event)" />
@@ -324,14 +408,26 @@ function cloneLabel(source: LabelData): LabelData {
               </label>
             </div>
           }
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Color</legend>
+        <details class="group" open>
+          <summary class="group__legend">Color</summary>
+          <div class="group__body">
+
+          <label class="field field--inline">
+            <input
+              type="checkbox"
+              [ngModel]="!!label().transparentBackground"
+              (ngModelChange)="patch({ transparentBackground: $event })"
+            />
+            <span>Fondo transparente</span>
+          </label>
 
           <label class="field field--inline">
             <input
               type="color"
+              [disabled]="!!label().transparentBackground"
               [ngModel]="label().theme.background"
               (ngModelChange)="patchTheme({ background: $event })"
             />
@@ -373,10 +469,12 @@ function cloneLabel(source: LabelData): LabelData {
             />
             <span>Punto activo</span>
           </label>
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Medidas (mm)</legend>
+        <details class="group" open>
+          <summary class="group__legend">Medidas (mm)</summary>
+          <div class="group__body">
 
           <div class="row">
             <label class="field">
@@ -414,10 +512,12 @@ function cloneLabel(source: LabelData): LabelData {
             />
             <output>{{ label().paddingMm }} mm</output>
           </label>
-        </fieldset>
+        </div>
+        </details>
 
-        <fieldset class="group">
-          <legend>Datos (JSON)</legend>
+        <details class="group" open>
+          <summary class="group__legend">Datos (JSON)</summary>
+          <div class="group__body">
           <textarea rows="6" [ngModel]="json()" (ngModelChange)="draftJson.set($event)"></textarea>
           @if (jsonError()) {
             <p class="error" role="alert">{{ jsonError() }}</p>
@@ -426,7 +526,8 @@ function cloneLabel(source: LabelData): LabelData {
             <button type="button" class="btn" (click)="applyJson()">Aplicar JSON</button>
             <button type="button" class="btn" (click)="reset()">Restablecer ejemplo</button>
           </div>
-        </fieldset>
+        </div>
+        </details>
       </aside>
 
       <section class="preview">
@@ -512,21 +613,66 @@ function cloneLabel(source: LabelData): LabelData {
         font-weight: 600;
       }
 
+      /* Cada grupo es un <details> colapsable con estilo de tarjeta. */
       .group {
         border: 1px solid #e5e7eb;
         border-radius: 10px;
-        padding: 14px;
         margin: 0 0 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+        background: #fff;
+        overflow: hidden;
       }
 
-      legend {
+      .group__legend {
+        list-style: none;
+        cursor: pointer;
+        padding: 10px 14px;
         font-size: 13px;
         font-weight: 600;
         color: #4b5563;
-        padding: 0 6px;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* Oculta el marcador nativo en todos los navegadores. */
+      .group__legend::-webkit-details-marker { display: none; }
+      .group__legend::marker { content: ''; }
+
+      /* Chevron rotatorio a la izquierda del título. */
+      .group__legend::before {
+        content: '';
+        width: 0;
+        height: 0;
+        border-top: 4px solid transparent;
+        border-bottom: 4px solid transparent;
+        border-left: 6px solid #6b7280;
+        transition: transform 0.15s ease-out;
+        flex: 0 0 auto;
+      }
+
+      .group[open] > .group__legend::before {
+        transform: rotate(90deg);
+      }
+
+      .group[open] > .group__legend {
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .group__legend:hover {
+        background: #f9fafb;
+      }
+
+      .group__legend:focus-visible {
+        outline: 2px solid #6366f1;
+        outline-offset: -2px;
+      }
+
+      .group__body {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
       }
 
       .field {
@@ -615,6 +761,114 @@ function cloneLabel(source: LabelData): LabelData {
         padding: 8px 10px;
       }
 
+      .row--wrap {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .property {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .property__text {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .property__icon-picker {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        flex: 0 0 auto;
+        cursor: pointer;
+      }
+
+      .property__icon-picker:focus-within {
+        outline: 2px solid #6366f1;
+        outline-offset: 1px;
+      }
+
+      .property__icon-picker select {
+        border: none;
+        padding: 4px 4px 4px 0;
+        background: transparent;
+        font-size: 12px;
+        cursor: pointer;
+        width: 108px;
+      }
+
+      .property__icon-picker select:focus-visible {
+        outline: none;
+      }
+
+      .property__icon-preview {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-size: 18px;
+        flex: 0 0 auto;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        font: inherit;
+        font-size: 12px;
+        line-height: 1.2;
+        color: #374151;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .chip:hover {
+        background: #e5e7eb;
+      }
+
+      .chip.is-active {
+        border-color: #6366f1;
+        background: #eef2ff;
+        color: #3730a3;
+      }
+
+      .chip__icon {
+        font-size: 16px;
+      }
+
+      .field__hint {
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      .field__hint a {
+        color: #4f46e5;
+      }
+
+      select {
+        width: 100%;
+        font: inherit;
+        font-size: 13px;
+        color: #111827;
+        padding: 8px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+      }
+
       .error {
         margin: 0;
         font-size: 12px;
@@ -698,6 +952,23 @@ export class LabelEditorComponent {
   /** Estado editable de la etiqueta. */
   readonly label = signal<LabelData>(cloneLabel(VANTA_LABEL));
 
+  /** Iconos frecuentes para usar como viñeta de propiedades. */
+  readonly iconSuggestions: readonly string[] = [
+    'check_circle',
+    'star',
+    'bolt',
+    'water_drop',
+    'shield',
+    'auto_awesome',
+    'bubble_chart',
+    'eco',
+    'directions_car',
+    'settings',
+    'thumb_up',
+    'verified',
+    'diamond',
+  ];
+
   /** Zoom de la vista previa. */
   readonly zoom = signal(1);
 
@@ -741,12 +1012,39 @@ export class LabelEditorComponent {
   }
 
   addProperty(): void {
-    this.patch({ properties: [...this.label().properties, 'NUEVA PROPIEDAD'] });
+    this.patch({
+      properties: [...this.label().properties, { text: 'NUEVA PROPIEDAD' }],
+    });
   }
 
-  updateProperty(index: number, value: string): void {
-    const properties = [...this.label().properties];
-    properties[index] = value;
+  /** Actualiza el texto de una propiedad. */
+  updatePropertyText(index: number, text: string): void {
+    const properties = this.label().properties.map((property, i) => {
+      if (i !== index) {
+        return property;
+      }
+      const normalized = normalizeProperty(property);
+      return { ...normalized, text };
+    });
+    this.patch({ properties });
+  }
+
+  /**
+   * Actualiza el ícono de una propiedad. Cadena vacía → limpia el ícono
+   * (usa el global). Se acepta cualquier nombre de Material Symbols.
+   */
+  updatePropertyIcon(index: number, icon: string): void {
+    const trimmed = (icon ?? '').trim();
+    const properties = this.label().properties.map((property, i) => {
+      if (i !== index) {
+        return property;
+      }
+      const normalized = normalizeProperty(property);
+      if (!trimmed) {
+        return { text: normalized.text };
+      }
+      return { text: normalized.text, icon: trimmed };
+    });
     this.patch({ properties });
   }
 
@@ -808,8 +1106,14 @@ export class LabelEditorComponent {
       return;
     }
     try {
-      const parsed = JSON.parse(raw) as LabelData;
-      this.label.set(cloneLabel({ ...VANTA_LABEL, ...parsed }));
+      const parsed = JSON.parse(raw) as Partial<LabelData> & {
+        properties?: Array<string | { text: string; icon?: string }>;
+      };
+      // Normaliza properties viejos que llegan como string[].
+      const properties = (parsed.properties ?? VANTA_LABEL.properties).map((property) =>
+        typeof property === 'string' ? { text: property } : { ...property },
+      );
+      this.label.set(cloneLabel({ ...VANTA_LABEL, ...parsed, properties }));
       this.draftJson.set(null);
       this.jsonError.set(null);
     } catch {
@@ -862,6 +1166,7 @@ export class LabelEditorComponent {
         widthMm: data.widthMm,
         heightMm: data.heightMm,
         background: data.theme.background,
+        transparent: !!data.transparentBackground,
       });
     } catch (error) {
       this.exportError.set(

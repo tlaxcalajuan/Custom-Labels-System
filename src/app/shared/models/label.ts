@@ -3,6 +3,17 @@
  * Todo el contenido textual y de color es configurable.
  */
 
+/** Item de la lista de propiedades: texto e icono opcional por-propiedad. */
+export interface LabelProperty {
+  /** Texto visible, ej. "LIMPIEZA PROFUNDA". */
+  text: string;
+  /**
+   * Icono de Material Symbols específico para esta propiedad. Si se omite,
+   * usa `propertyIcon` global.
+   */
+  icon?: string;
+}
+
 /** Bloque de texto de la etiqueta trasera (encabezado + cuerpo). */
 export interface LabelInfoSection {
   /** Encabezado del bloque, ej. "MODO DE USO". */
@@ -52,7 +63,11 @@ export interface LabelData {
   /** Subtítulo / indicación destacada, ej. "AGITE SUAVEMENTE ANTES DE USAR". */
   subtitle: string;
   /** Propiedades o beneficios (puntos / viñetas). */
-  properties: string[];
+  properties: LabelProperty[];
+  /** Estilo de viñeta para las propiedades. */
+  propertyBullet: 'dot' | 'icon' | 'none';
+  /** Ícono de Material Symbols por defecto (se usa si la propiedad no define uno). */
+  propertyIcon: string;
   /** Bloques informativos de la etiqueta trasera. */
   info: LabelInfoSection[];
   /** Escala opcional (pH u otro indicador). */
@@ -77,6 +92,12 @@ export interface LabelData {
   footerLogoSize: number;
   /** Paleta de color. */
   theme: LabelTheme;
+  /**
+   * Cuando es `true`, la etiqueta se renderiza y exporta con fondo transparente,
+   * ignorando `theme.background`. Útil para PNG/PDF sin recuadro de color.
+   * JPG no soporta transparencia: en ese caso el exportador sustituye por blanco.
+   */
+  transparentBackground?: boolean;
   /** Ancho de impresión en milímetros. */
   widthMm: number;
   /** Alto de impresión en milímetros. */

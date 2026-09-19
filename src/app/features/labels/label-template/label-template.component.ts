@@ -60,9 +60,23 @@ function clampPercent(value: number, min: number, max: number): number {
             }
           </div>
         </div>
-        <ul class="label__properties" [style.margin-left.%]="logoInset()">
+        <ul class="label__properties">
           @for (property of data().properties; track $index) {
-            <li>{{ property }}</li>
+            <li>
+              @switch (data().propertyBullet) {
+                @case ('dot') {
+                  <span class="label__bullet label__bullet--dot" aria-hidden="true"></span>
+                }
+                @case ('icon') {
+                  <span
+                    class="label__bullet label__bullet--icon material-symbols-rounded"
+                    aria-hidden="true"
+                    >{{ property.icon || data().propertyIcon }}</span
+                  >
+                }
+              }
+              <span class="label__bullet-text">{{ property.text }}</span>
+            </li>
           }
         </ul>
       </div>
@@ -334,34 +348,49 @@ function clampPercent(value: number, min: number, max: number): number {
            el ancho de .label__center como referencia (mismo que el logo). */
         flex: 0 0 auto;
         width: 100%;
-        margin: 0.8em 0 0;
+        margin: 0.4em 0 0;
         padding: 0;
         list-style: none;
         display: flex;
         flex-direction: column;
         gap: 0.5em;
+        margin-left: 4rem;
       }
 
       .label__properties li {
-        position: relative;
-        padding-left: 1.4em;
+        display: flex;
+        align-items: baseline;
+        gap: 0.55em;
         font-family: 'Fugaz One', 'Impact', 'Arial Narrow', sans-serif;
-        font-size: 1.05em;
+        font-size: 1.4em;
         font-weight: 400;
         letter-spacing: 0.02em;
         color: var(--label-text);
         text-transform: uppercase;
       }
 
-      .label__properties li::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0.45em;
+      .label__bullet {
+        flex: 0 0 auto;
+        color: var(--label-accent);
+      }
+
+      .label__bullet--dot {
+        align-self: center;
         width: 0.55em;
         height: 0.55em;
         border-radius: 50%;
         background: var(--label-accent);
+      }
+
+      .label__bullet--icon {
+        /* Ligeramente más grande que el texto, alineado a la altura de x. */
+        font-size: 1.1em;
+        line-height: 1;
+        transform: translateY(0.15em);
+      }
+
+      .label__bullet-text {
+        flex: 1 1 auto;
       }
 
       /* --- Etiqueta trasera --- */
@@ -434,7 +463,7 @@ function clampPercent(value: number, min: number, max: number): number {
       .label__rule {
         grid-row: 3;
         grid-column: 1 / -1;
-        height: 0.5em;
+        height: 1em;
         background: var(--label-accent);
       }
 
@@ -514,12 +543,13 @@ export class LabelTemplateComponent {
 
   /** Variables CSS derivadas del tema y las medidas. */
   protected readonly cssVars = computed<Record<string, string>>(() => {
-    const { theme, widthMm, heightMm, paddingMm } = this.data();
+    const { theme, widthMm, heightMm, transparentBackground } = this.data();
     return {
       '--label-w': `${widthMm}mm`,
       '--label-h': `${heightMm}mm`,
 
-      '--label-bg': theme.background,
+      // Si el fondo es transparente, se ignora el color del tema.
+      '--label-bg': transparentBackground ? 'transparent' : theme.background,
       '--label-accent': theme.accent,
       '--label-text': theme.text,
       '--label-muted': theme.muted,
@@ -565,16 +595,25 @@ export class LabelTemplateComponent {
     return (100 - clamped) / 2;
   });
 
+  /**
+   * Margen izquierdo de la lista de propiedades: parte del `logoInset` (para
+   * alinearse con el borde del logo) y añade un pequeño extra en `em` para
+   * quedar visualmente pegado al contenido real del logo (que suele tener aire
+   * dentro de su caja por `object-fit: contain`).
+   */
+  protected readonly propertiesInset = computed(() => `calc(${this.logoInset()}% + 1.1em)`);
+
   /** Alto del logo del pie en `em`, según su porcentaje de tamaño. */
   protected readonly footerMarkHeight = computed(() => {
     const size = this.data().footerLogoSize || 100;
     return (3.2 * size) / 100;
   });
 
-  /** Propiedades unidas con bullet para la línea vertical. */
+  /** Propiedades unidas con bullet para la línea vertical del lateral. */
   protected readonly propertiesLine = computed(() =>
     this.data()
-      .properties.filter((property) => property.trim().length > 0)
+      .properties.map((property) => property.text)
+      .filter((text) => text.trim().length > 0)
       .join(' • '),
   );
 
