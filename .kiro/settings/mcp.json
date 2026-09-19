@@ -1,0 +1,14 @@
+﻿{
+  "mcpServers": {
+    "pokeapi-docs": {
+      "command": "npx",
+      "args": ["-y", "@anush007/mcp-server-pokeapi"],
+      "disabled": false
+    },
+    "angular-docs": {
+      "command": "npx",
+      "args": ["-y", "angular-docs-mcp"],
+      "disabled": false
+    }
+  }
+}

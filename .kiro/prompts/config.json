@@ -1,0 +1,38 @@
+﻿{
+  "version": "v1",
+  "prompts": {
+    "create-component": {
+      "description": "Prompt template for creating Angular components",
+      "file": "prompts/create-component.md",
+      "placeholders": [
+        "componentName",
+        "purpose",
+        "componentType"
+      ]
+    },
+    "create-service": {
+      "description": "Prompt template for creating Angular services",
+      "file": "prompts/create-service.md",
+      "placeholders": [
+        "serviceName",
+        "servicePurpose"
+      ]
+    },
+    "unit-testing": {
+      "description": "Prompt template for creating unit tests",
+      "file": "prompts/unit-testing.md",
+      "placeholders": [
+        "testType",
+        "testName"
+      ]
+    },
+    "code-review": {
+      "description": "Prompt template for code reviews",
+      "file": "prompts/code-review.md",
+      "placeholders": [
+        "codeToReview",
+        "focusArea"
+      ]
+    }
+  }
+}

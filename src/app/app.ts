@@ -8,5 +8,5 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.css'
 })
 export class App {
-  protected readonly title = signal('example-kiro-agents');
+  protected readonly title = signal('PokeTodo - Pokémon Tracker');
 }

@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Run Tests After Task",
+      "trigger": "PostTaskExec",
+      "action": {
+        "type": "command",
+        "command": "ng test --watch=false",
+        "timeout": 120
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Run Tests on Save",
+      "trigger": "PostFileSave",
+      "matcher": "\\.spec\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "ng test --watch=false",
+        "timeout": 60
+      }
+    }
+  ]
+}

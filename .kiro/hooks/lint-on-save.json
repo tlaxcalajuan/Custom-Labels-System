@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Run Lint on Save",
+      "trigger": "PostFileSave",
+      "matcher": "\\.ts$",
+      "action": {
+        "type": "command",
+        "command": "ng lint",
+        "timeout": 60
+      }
+    }
+  ]
+}
