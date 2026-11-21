@@ -138,12 +138,33 @@ function cloneLabel(source: LabelData): LabelData {
               (ngModelChange)="patch({ description: $event })"
             ></textarea>
           </label>
+
+          <label class="field field--inline">
+            <input
+              type="checkbox"
+              [ngModel]="label().showSideTexts !== false"
+              (ngModelChange)="patch({ showSideTexts: $event })"
+            />
+            <span>Mostrar description + propiedades laterales</span>
+          </label>
         </div>
         </details>
 
         <details class="group" open>
           <summary class="group__legend">Properties (puntos)</summary>
           <div class="group__body">
+
+          <label class="field">
+            <span>Alineación (propiedades + producto español)</span>
+            <select
+              [ngModel]="label().centerAlign || 'left'"
+              (ngModelChange)="patch({ centerAlign: $event })"
+            >
+              <option value="left">Izquierda</option>
+              <option value="center">Centro</option>
+              <option value="right">Derecha</option>
+            </select>
+          </label>
 
           <label class="field">
             <span>Viñeta</span>
@@ -267,6 +288,31 @@ function cloneLabel(source: LabelData): LabelData {
               [ngModel]="label().content"
               (ngModelChange)="patch({ content: $event })"
             />
+          </label>
+
+          <label class="field field--inline">
+            <span>Tamaño contenido</span>
+            <input
+              type="range"
+              min="50"
+              max="200"
+              step="1"
+              [ngModel]="label().contentSize ?? 100"
+              (ngModelChange)="patch({ contentSize: +$event })"
+            />
+            <output>{{ label().contentSize ?? 100 }}%</output>
+          </label>
+
+          <label class="field field--inline">
+            <input
+              type="color"
+              [ngModel]="label().contentColor || label().theme.accent"
+              (ngModelChange)="patch({ contentColor: $event })"
+            />
+            <span>Color contenido</span>
+            @if (label().contentColor) {
+              <button type="button" class="btn btn--icon" (click)="patch({ contentColor: null })">↺</button>
+            }
           </label>
 
           <label class="field">

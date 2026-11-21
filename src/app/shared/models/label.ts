@@ -68,12 +68,23 @@ export interface LabelData {
   propertyBullet: 'dot' | 'icon' | 'none';
   /** Ícono de Material Symbols por defecto (se usa si la propiedad no define uno). */
   propertyIcon: string;
+  /**
+   * Si es false, oculta el bloque lateral de textos (description + línea de propiedades).
+   * Los bullets debajo del logo no se ven afectados.
+   */
+  showSideTexts?: boolean;
+  /** Alineación horizontal de propiedades y product-es dentro de label__center. */
+  centerAlign?: 'left' | 'center' | 'right';
   /** Bloques informativos de la etiqueta trasera. */
   info: LabelInfoSection[];
   /** Escala opcional (pH u otro indicador). */
   scale: LabelScale | null;
   /** Contenido neto, ej. "Contenido 500ml / 16.9 FL OZ". */
   content: string;
+  /** Tamaño del contenido neto, en % (50–200). */
+  contentSize?: number;
+  /** Color del contenido neto. Si no se define usa el acento. */
+  contentColor?: string | null;
   /** Origen o leyenda legal, ej. "Hecho en México.". */
   origin: string;
   /** Marca de la empresa, ej. "ZORUX". */

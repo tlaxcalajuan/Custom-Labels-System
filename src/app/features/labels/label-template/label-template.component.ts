@@ -47,12 +47,14 @@ const TITLE_LINE_HEIGHT = 0.82;
       <!-- Lateral: descripción vertical + línea de propiedades + escala -->
       <div class="label__side">
         <!-- Ambos textos verticales comparten el mismo arranque inferior -->
-        <div class="label__side-texts">
-          <p class="v-text label__description">{{ data().description }}</p>
-          @if (propertiesLine()) {
-            <p class="v-text label__props-line">{{ propertiesLine() }}</p>
-          }
-        </div>
+        @if (data().showSideTexts !== false) {
+          <div class="label__side-texts">
+            <p class="v-text label__description">{{ data().description }}</p>
+            @if (propertiesLine()) {
+              <p class="v-text label__props-line">{{ propertiesLine() }}</p>
+            }
+          </div>
+        }
         @if (data().scale; as scale) {
           <div class="label__scale">
             <span class="label__scale-label">{{ scale.label }}</span>
@@ -73,9 +75,9 @@ const TITLE_LINE_HEIGHT = 0.82;
         }
       </div>
 
-      <!-- Centro: logo principal + propiedades -->
-      <div class="label__center">
-        <div class="label__logo">
+      <!-- Centro: logo principal + propiedades + nombre producto -->
+      <div class="label__center" [style.align-items]="centerAlignItems()">
+        <div class="label__logo" [style.justify-content]="centerAlignItems()">
           <div
             class="label__logo-box"
             [style.width.%]="data().logoSize"
@@ -93,7 +95,7 @@ const TITLE_LINE_HEIGHT = 0.82;
             }
           </div>
         </div>
-        <ul class="label__properties">
+        <ul class="label__properties" [style.align-items]="centerAlignItems()">
           @for (property of data().properties; track $index) {
             <li>
               @switch (data().propertyBullet) {
@@ -112,6 +114,7 @@ const TITLE_LINE_HEIGHT = 0.82;
             </li>
           }
         </ul>
+        <span class="label__product-es" [style.font-size.em]="productSpanishFontSize()">{{ productSpanishTruncated() }}</span>
       </div>
 
       <!-- Etiqueta trasera: bloques informativos -->
@@ -124,12 +127,9 @@ const TITLE_LINE_HEIGHT = 0.82;
         }
       </div>
 
-      <!-- Franja de producto: el subtítulo arranca en la misma columna que Info -->
+      <!-- Franja de producto: subtítulo bajo Info -->
       <div class="label__strip">
-        <span class="label__product-es" [style.font-size.em]="productSpanishFontSize()">{{
-          data().productSpanish
-        }}</span>
-        <span class="label__subtitle">{{ data().subtitle }}</span>
+        <span class="label__subtitle" style="grid-column: 4">{{ data().subtitle }}</span>
       </div>
 
       <div class="label__rule"></div>
@@ -151,7 +151,7 @@ const TITLE_LINE_HEIGHT = 0.82;
           </span>
           <span class="label__footer-tagline">{{ data().companyTagline }}</span>
         </div>
-        <span class="label__content">{{ data().content }}</span>
+        <span class="label__content" [style.color]="data().contentColor || null"><span [style.font-size.em]="contentFontSize()">{{ data().content }}</span></span>
         <span class="label__origin">{{ data().origin }}</span>
       </div>
     </div>
@@ -201,11 +201,10 @@ const TITLE_LINE_HEIGHT = 0.82;
       .label__side {
         grid-row: 1;
         grid-column: 1;
-        /* Separación extra con la columna del título. Va aquí (y no en el
-           título) para que la columna se ensanche y la franja siga alineada. */
         margin-right: 1.8em;
         display: flex;
         flex-direction: column;
+        justify-content: space-between;
         align-items: stretch;
         gap: 1em;
         min-height: 0;
@@ -234,7 +233,7 @@ const TITLE_LINE_HEIGHT = 0.82;
       }
 
       .label__scale {
-        margin-top: .5rem;
+        margin-top: auto;
         display: flex;
         flex-direction: column;
         gap: 0.45em;
@@ -319,24 +318,21 @@ const TITLE_LINE_HEIGHT = 0.82;
       .label__center {
         grid-row: 1;
         grid-column: 3;
-        /* Angosta la columna del logo y deja más aire antes de Info. */
         margin-right: 2.4em;
-        /* Flujo vertical simple: logo arriba, propiedades justo debajo.
-           El logo es flex: 0 0 auto y va primero, así agregar puntos
-           extiende la lista hacia abajo sin mover el logo. */
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
         min-width: 0;
         min-height: 0;
       }
+
 
       .label__logo {
         flex: 0 0 auto;
         width: 100%;
         display: flex;
         align-items: flex-start;
-        justify-content: center;
+        justify-content: flex-start;
         padding-top: 1rem;
       }
 
@@ -397,17 +393,15 @@ const TITLE_LINE_HEIGHT = 0.82;
       }
 
       .label__properties {
-        /* Fluye debajo del logo. El margin-left llega por binding y usa
-           el ancho de .label__center como referencia (mismo que el logo). */
         flex: 0 0 auto;
-        width: 100%;
         margin: 0.4em 0 0;
         padding: 0;
         list-style: none;
         display: flex;
         flex-direction: column;
         gap: 0.5em;
-        margin-left: 4rem;
+        width: max-content;
+        max-width: 100%;
       }
 
       .label__properties li {
@@ -479,29 +473,25 @@ const TITLE_LINE_HEIGHT = 0.82;
       .label__strip {
         grid-row: 2;
         grid-column: 1 / -1;
-        /* Hereda las columnas de la etiqueta: el subtítulo cae justo bajo Info. */
         display: grid;
         grid-template-columns: subgrid;
-        /* Centrado: al crecer o encoger el texto, la franja reparte el espacio. */
         align-items: center;
       }
 
-      .label__strip > .label__product-es {
-        /* Arranca en la columna de la marca: alineado con el título. */
-        grid-column: 2 / 4;
-      }
-
       .label__strip > .label__subtitle {
-        grid-column: 4;
+        grid-column: 2 / -1;
       }
 
       .label__product-es {
-        /* El tamaño llega como binding (base 1.9em × ajuste). */
         font-family: 'Fugaz One', 'Impact', 'Arial Narrow', sans-serif;
         font-weight: 400;
         letter-spacing: 0.01em;
-        color: var(--label-text);
+        color: var(--label-accent);
         text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2em;
       }
 
       .label__subtitle {
@@ -576,11 +566,15 @@ const TITLE_LINE_HEIGHT = 0.82;
 
       .label__content {
         grid-row: 2;
-        /* Empieza en la columna 2 igual que .label__product-es, para que
-           ambos elementos queden alineados verticalmente en la etiqueta. */
         grid-column: 2 / 4;
-        font-size: 1.7em;
+        white-space: nowrap;
+        overflow: hidden;
+        min-width: 0;
         color: var(--label-accent);
+        /* Altura fija en unidades del label para que font-size del hijo no empuje */
+        height: 2em;
+        display: flex;
+        align-items: center;
       }
 
       .label__origin {
@@ -681,8 +675,14 @@ export class LabelTemplateComponent {
 
   /** Tamaño del nombre en español, en `em`, según su porcentaje de ajuste. */
   protected readonly productSpanishFontSize = computed(
-    () => (1.9 * clampPercent(this.data().productSpanishSize, 50, 250)) / 100,
+    () => (1.5 * clampPercent(this.data().productSpanishSize, 50, 250)) / 100,
   );
+
+  /** Nombre en español truncado a 30 caracteres para no desbordar. */
+  protected readonly productSpanishTruncated = computed(() => {
+    const text = this.data().productSpanish ?? '';
+    return text.length > 30 ? text.slice(0, 30).trimEnd() + '…' : text;
+  });
 
   /**
    * Sangría (en % de la columna central) del borde izquierdo del logo principal.
@@ -706,6 +706,20 @@ export class LabelTemplateComponent {
   protected readonly footerMarkHeight = computed(() => {
     const size = this.data().footerLogoSize || 100;
     return (3.2 * size) / 100;
+  });
+
+  /** Tamaño del contenido neto en em. */
+  protected readonly contentFontSize = computed(
+    () => (1.7 * clampPercent(this.data().contentSize ?? 100, 50, 200)) / 100,
+  );
+
+  /** Valor de align-items para label__center según centerAlign. */
+  protected readonly centerAlignItems = computed(() => {
+    switch (this.data().centerAlign) {
+      case 'center': return 'center';
+      case 'right':  return 'flex-end';
+      default:       return 'flex-start';
+    }
   });
 
   /** Propiedades unidas con bullet para la línea vertical del lateral. */

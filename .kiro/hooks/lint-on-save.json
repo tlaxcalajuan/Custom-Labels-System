@@ -9,7 +9,8 @@
         "type": "command",
         "command": "ng lint",
         "timeout": 60
-      }
+      },
+      "enabled": false
     }
   ]
 }

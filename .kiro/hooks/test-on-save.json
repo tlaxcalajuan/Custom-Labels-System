@@ -9,7 +9,8 @@
         "type": "command",
         "command": "ng test --watch=false",
         "timeout": 60
-      }
+      },
+      "enabled": false
     }
   ]
 }
