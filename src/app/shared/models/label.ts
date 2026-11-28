@@ -77,6 +77,8 @@ export interface LabelData {
   centerAlign?: 'left' | 'center' | 'right';
   /** Bloques informativos de la etiqueta trasera. */
   info: LabelInfoSection[];
+  /** Tamaño de fuente del bloque info, en % (50–150). */
+  infoSize?: number;
   /** Escala opcional (pH u otro indicador). */
   scale: LabelScale | null;
   /** Contenido neto, ej. "Contenido 500ml / 16.9 FL OZ". */

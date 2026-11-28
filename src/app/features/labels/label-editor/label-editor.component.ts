@@ -231,6 +231,16 @@ function cloneLabel(source: LabelData): LabelData {
           <summary class="group__legend">Info (etiqueta trasera)</summary>
           <div class="group__body">
 
+                    <label class="field field--inline">
+            <span>Tamaño fuente info</span>
+            <input
+              type="range" min="50" max="150" step="1"
+              [ngModel]="label().infoSize ?? 100"
+              (ngModelChange)="patch({ infoSize: +$event })"
+            />
+            <output>{{ label().infoSize ?? 100 }}%</output>
+          </label>
+
           @for (section of label().info; track $index) {
             <div class="card">
               <div class="row">
@@ -687,8 +697,18 @@ function cloneLabel(source: LabelData): LabelData {
               class="btn"
               [disabled]="isExporting()"
               (click)="exportAs('pdf')"
+              title="Exportar en PDF UltraHD (máxima calidad)"
             >
-              PDF
+              PDF UltraHD
+            </button>
+            <button
+              type="button"
+              class="btn"
+              [disabled]="isExporting()"
+              (click)="exportAs('svg')"
+              title="Exportar en formato vectorial SVG"
+            >
+              SVG
             </button>
             <button type="button" class="btn" (click)="print()">Imprimir</button>
           </div>

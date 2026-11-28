@@ -118,7 +118,7 @@ const TITLE_LINE_HEIGHT = 0.82;
       </div>
 
       <!-- Etiqueta trasera: bloques informativos -->
-      <div class="label__info">
+      <div class="label__info" [style.font-size.em]="infoFontSize()">
         @for (section of data().info; track $index) {
           <section class="label__info-block">
             <h2 class="label__info-heading">{{ section.heading }}</h2>
@@ -711,6 +711,11 @@ export class LabelTemplateComponent {
   /** Tamaño del contenido neto en em. */
   protected readonly contentFontSize = computed(
     () => (1.7 * clampPercent(this.data().contentSize ?? 100, 50, 200)) / 100,
+  );
+
+  /** Tamaño de fuente del bloque info en em. */
+  protected readonly infoFontSize = computed(
+    () => (0.78 * clampPercent(this.data().infoSize ?? 100, 50, 150)) / 100,
   );
 
   /** Valor de align-items para label__center según centerAlign. */
